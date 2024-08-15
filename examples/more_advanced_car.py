@@ -25,7 +25,7 @@ class MyCar(Car):
                 
                 if min_traffic == 0:
                     break
-
+            print(type(action))
             return action
 
         return Action.FORWARD

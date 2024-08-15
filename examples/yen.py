@@ -12,42 +12,52 @@ class MyCar(Car):
     def __init__(self, road_key: tuple[int, int], road_pos: int, car_id: int):
         super().__init__(road_key, road_pos, car_id)
         self.algneed = True
+        self.av_set = set()
+        self.path = []
+        self.actions = []
 
     def get_action(self, map_state: MapState) -> Action:
         my_road_key = self.get_road_key()
         my_road_pos = self.get_road_pos()
-
-
         self.api = EnvironmentAPI(map_state)
+
         my_road = self.api.get_road((1,2))
         
+        # ****
         if self.algneed:
             self.cost_matrix = self.api.get_adjacency_matrix()
-            # print(self.cost_matrix)
             self.create_adjList()
-            print(self.adjList)
-    
+            self.create_avaliable_set(1)
+            self.bfs(my_road_key)
+            print(f'\nPath:\n{self.path}, actions: {self.actions}')
+        # ****
+        print(my_road_pos)
         if my_road.is_position_road_end(my_road_pos):
-            available_actions = my_road.get_available_actions()
-            min_traffic = 9999
-
-            for action in available_actions:
-                traffic = self.api.get_next_road(my_road_key, action).get_traffic()
-                if traffic < min_traffic:
-                    min_traffic = traffic
-                    action = action
-                
-                if min_traffic == 0:
-                    break
-
-            return action
-
+            print('road is ended')
+            print(self.actions[self.i])
+            current_action = self.actions[self.i]
+            self.i += 1
+            return Action(current_action)
         return Action.FORWARD
         
+
+
+    def create_avaliable_set(self, point_number):
+        """
+        Returns a set of avaliable combinations of getting to the specific point.
+        Roads can be one-way.
+        """
+        self.i = 1
+        point_data = self.api.get_points_for_specific_car(1)[point_number].road_positions
+        for av_methods in point_data:
+            road, _ = av_methods
+            self.av_set.add(road)
+
+
     def create_adjList(self):
         """
-        A dict where keys are connection between 2 nodes and values are every possible neighbour of this connection.
-        Values are: [Neighbour key (e.g. (0,1)); Action needed to reach it (action.py); Length of neighbour]
+        A dict where keys are connections between 2 nodes and values are every possible neighbour of this connection.
+        Values are: [Neighbour key (e.g. (0,1)); Action needed to reach it (action.py); Length to neighbour]
         """
         self.adjList = defaultdict(list)
         # print(self.cost_matrix[0:8, 0:8])
@@ -64,28 +74,27 @@ class MyCar(Car):
         self.algneed = False
 
     
-    def bfs(self, startNode, point):
-        queue = deque([(startNode, [startNode], [0, 0])])
-        paths = []
+    def bfs(self, startNode):
+        # print('Start Node: ', self.adjList[startNode])
+        queue = deque([(startNode, [startNode], [0])])
+        point_list = list(self.av_set)
 
         while queue:
-            # 'Wyciagniecie' aktualnego miasta oraz sciezki z lewej strony queue
-            # Tak wiec rozwijamy najpierw wszystkie sciezki po kolei
-            currentNode, path, current_point = queue.popleft()
-            #print(f"BFS: {path}")
-            
-            # Warunek sprawdzajacy czy zostala osiagnieta odpowiednia dlugosc
-            if currentNode == point:
-                paths.append(path)
-                # print(path)
-                continue
-            
+            currentNode, path, action = queue.popleft()
+            currentNode = currentNode
+            # print(currentNode)
+            if currentNode in point_list:
+                # print(currentNode, ' is in ', point_list)
+                # print('Start Node: ', startNode)
+                # print(action)
+                self.path = path
+                self.actions = action
+                break
+                
             for neighbour in self.adjList[currentNode]:
-                if neighbour not in path:
-                    horizontal_dist = 1
-                    vertical_dist = 1
-                    queue.append((neighbour, path + [neighbour], [current_point[0] + horizontal_dist, current_point[1] + vertical_dist]))
-        return paths
+                # print(neighbour[0])
+                if neighbour[0] not in path:
+                    queue.append((neighbour[0], path + [neighbour[0]], action + [neighbour[1]]))
 
 
 if __name__ == "__main__":
