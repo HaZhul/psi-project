@@ -14,6 +14,7 @@ class MyCar(Car):
 
         my_road = api.get_road(my_road_key)
         if my_road.is_position_road_end(my_road_pos):
+            print('Road is ended')
             available_actions = my_road.get_available_actions()
             min_traffic = 9999
 
@@ -25,7 +26,7 @@ class MyCar(Car):
                 
                 if min_traffic == 0:
                     break
-            print(type(action))
+            print(action)
             return action
 
         return Action.FORWARD

@@ -12,33 +12,38 @@ class MyCar(Car):
     def __init__(self, road_key: tuple[int, int], road_pos: int, car_id: int):
         super().__init__(road_key, road_pos, car_id)
         self.algneed = True
-        self.av_set = set()
         self.path = []
         self.actions = []
+        self.points = 1
 
     def get_action(self, map_state: MapState) -> Action:
         my_road_key = self.get_road_key()
         my_road_pos = self.get_road_pos()
         self.api = EnvironmentAPI(map_state)
 
-        my_road = self.api.get_road((1,2))
+        my_road = self.api.get_road(my_road_key)
         
         # ****
         if self.algneed:
             self.cost_matrix = self.api.get_adjacency_matrix()
             self.create_adjList()
-            self.create_avaliable_set(1)
+            # print('Point: ', self.points)
+            self.create_avaliable_set(self.points)
+            # self.points += 1
             self.bfs(my_road_key)
             print(f'\nPath:\n{self.path}, actions: {self.actions}')
         # ****
-        print(my_road_pos)
+
         if my_road.is_position_road_end(my_road_pos):
-            print('road is ended')
-            print(self.actions[self.i])
-            current_action = self.actions[self.i]
-            self.i += 1
+            i = self.path.index(my_road_key)
+            try:
+                current_action = self.actions[i]
+            except:
+                self.algneed = True
+                return Action.BACK
             return Action(current_action)
-        return Action.FORWARD
+        else:
+            return Action.FORWARD
         
 
 
@@ -47,8 +52,10 @@ class MyCar(Car):
         Returns a set of avaliable combinations of getting to the specific point.
         Roads can be one-way.
         """
-        self.i = 1
+        self.av_set = set()
+        # print(self.api.get_points_for_specific_car(1))
         point_data = self.api.get_points_for_specific_car(1)[point_number].road_positions
+        # print(point_data)
         for av_methods in point_data:
             road, _ = av_methods
             self.av_set.add(road)
@@ -75,14 +82,13 @@ class MyCar(Car):
 
     
     def bfs(self, startNode):
-        # print('Start Node: ', self.adjList[startNode])
-        queue = deque([(startNode, [startNode], [0])])
+        queue = deque([(startNode, [startNode], [])])
         point_list = list(self.av_set)
 
         while queue:
             currentNode, path, action = queue.popleft()
             currentNode = currentNode
-            # print(currentNode)
+
             if currentNode in point_list:
                 # print(currentNode, ' is in ', point_list)
                 # print('Start Node: ', startNode)
@@ -92,7 +98,6 @@ class MyCar(Car):
                 break
                 
             for neighbour in self.adjList[currentNode]:
-                # print(neighbour[0])
                 if neighbour[0] not in path:
                     queue.append((neighbour[0], path + [neighbour[0]], action + [neighbour[1]]))
 
