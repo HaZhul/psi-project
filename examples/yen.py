@@ -5,6 +5,7 @@ from psi_environment.environment import Environment
 from psi_environment.api.environment_api import EnvironmentAPI
 
 from collections import defaultdict, deque
+from sortedcontainers import SortedList
 import numpy as np
 
 
@@ -31,6 +32,8 @@ class MyCar(Car):
             self.create_avaliable_set(self.points)
             # self.points += 1
             self.bfs(my_road_key)
+            self.mha_star(my_road_key)
+            print(self.adjList)
             print(f'\nPath:\n{self.path}, actions: {self.actions}')
         # ****
 
@@ -59,6 +62,7 @@ class MyCar(Car):
         for av_methods in point_data:
             road, _ = av_methods
             self.av_set.add(road)
+        self.av_set = list(self.av_set)
 
 
     def create_adjList(self):
@@ -83,7 +87,7 @@ class MyCar(Car):
     
     def bfs(self, startNode):
         queue = deque([(startNode, [startNode], [])])
-        point_list = list(self.av_set)
+        point_list = self.av_set
 
         while queue:
             currentNode, path, action = queue.popleft()
@@ -100,12 +104,53 @@ class MyCar(Car):
             for neighbour in self.adjList[currentNode]:
                 if neighbour[0] not in path:
                     queue.append((neighbour[0], path + [neighbour[0]], action + [neighbour[1]]))
+    
+    def calc_heuristic(self, point):
+        '''
+        Ogolem heurystyki dopuszczlane sa bardzo stinki do oblcizenia mha* bo zawsze L1
+        bedzie najlepsza bo JEST rzeczywista odlegoscia w tym przypadku. Ale jezeli chcesz
+        w to isc to znalazlem takie jakies smieszne: L1, L2, Chebyshev, Canberra.
+        Ale mysle ze lepiej zrobic niedopuszczalne bo wtedy faktycznie moze cos sie zmieniac
+        i bysmy wybierali najmniejsza wartosc ze wszystkich obliczonych. 
+        Jakie ja znalazlem: Podwojona odległość do najbliższego nieodwiedzonego miasta, 
+        maksymalna odległość do dowolnego nieodwiedzonego miasta, procentowa nadwyżka nad rzeczywistą znaną dolną granicą,
+        losowe przypisanie kosztu na podstawie odległości do wszystkich nieodwiedzonych miast,
+        "spłaszczonej" odległości Euklidesowej (np. f(d)=log(d+1), gdzie d to np. l2 albo l1)
+        Albo cokolwiek z dopuszczalnej ale pomnozone przez 2 czy 1.5 czy cokolwiek.
+        '''
+        manhattan_dist = []
+        for possible_access in self.av_set:
+            manhattan_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]))
+        return min(manhattan_dist)
+    
+
+    def mha_star(self, startNode):
+            queue = SortedList()
+            queue.add((0, 0, [startNode], [], startNode))
+
+            while queue:
+                # print(queue)
+                totalCost, currentDist, path, action, currentNode = queue.pop(0)
+                print(f'\nTotal cost: {totalCost}, path: {path}\n')
+                if currentNode in self.av_set:
+                    print('\n\n\nPath: ', path)
+                    return path
+
+                for neighbour in self.adjList[currentNode]:
+                    if neighbour[0] not in path:
+                        actual_cost = neighbour[2]
+                        g_n = currentDist + actual_cost
+                        h_n = self.calc_heuristic(neighbour[0])
+                        f_cost = g_n + h_n
+                        queue.add((f_cost, g_n, path + [neighbour[0]], action + [neighbour[1]], neighbour[0]))
+        
+            raise Exception('No path avaliable')
 
 
 if __name__ == "__main__":
     env = Environment(
         agent_type=MyCar,
-        ticks_per_second=10,
+        ticks_per_second=3,
         n_bots=50,
         n_points=10,
         traffic_lights_length=10,
