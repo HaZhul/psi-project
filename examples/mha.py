@@ -3,6 +3,7 @@ from psi_environment.data.action import Action
 from psi_environment.data.map_state import MapState
 from psi_environment.environment import Environment
 from psi_environment.api.environment_api import EnvironmentAPI
+from psi_environment.data.point import PositionType
 
 from collections import defaultdict, deque
 from sortedcontainers import SortedList
@@ -16,7 +17,7 @@ class MyCar(Car):
         self.algneed = True
         self.path = []
         self.actions = []
-        self.points = 1
+        self.points = 0
 
     def get_action(self, map_state: MapState) -> Action:
         my_road_key = self.get_road_key()
@@ -29,6 +30,7 @@ class MyCar(Car):
         if self.algneed:
             self.cost_matrix = self.api.get_adjacency_matrix()
             self.create_adjList()
+            print(self.adjList)
             # print('Point: ', self.points)
             self.create_avaliable_set(self.points)
             # self.points += 1
@@ -36,7 +38,6 @@ class MyCar(Car):
             start = time.time()
             self.mha_star(my_road_key)
             print(f'Time: {time.time()-start}')
-            print(self.adjList)
             print(f'\nPath:\n{self.path}, actions: {self.actions}')
         # ****
 
@@ -59,12 +60,16 @@ class MyCar(Car):
         Roads can be one-way.
         """
         self.av_set = set()
-        # print(self.api.get_points_for_specific_car(1))
-        point_data = self.api.get_points_for_specific_car(1)[point_number].road_positions
-        # print(point_data)
-        for av_methods in point_data:
-            road, _ = av_methods
-            self.av_set.add(road)
+        road_obj = self.api.get_points_for_specific_car(1)[point_number]
+        if road_obj.type == PositionType.ROAD:
+            point_data = self.api.get_points_for_specific_car(1)[point_number].road_positions
+            for av_methods in point_data:
+                road, _ = av_methods
+                self.av_set.add(road)
+        elif road_obj.type == PositionType.NODE:
+            node = self.api.get_points_for_specific_car(1)[point_number].node
+            self.av_set = [key for key in self.adjList.keys() if node == key[1]]
+            
         self.av_set = list(self.av_set)
 
 
@@ -145,7 +150,7 @@ if __name__ == "__main__":
         n_bots=50,
         n_points=10,
         traffic_lights_length=10,
-        random_seed=69,
+        random_seed=2137,
     )
     while env.is_running():
         current_cost, is_running = env.step()
