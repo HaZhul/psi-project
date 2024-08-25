@@ -7,6 +7,7 @@ from psi_environment.api.environment_api import EnvironmentAPI
 from collections import defaultdict, deque
 from sortedcontainers import SortedList
 import numpy as np
+import time
 
 
 class MyCar(Car):
@@ -32,7 +33,9 @@ class MyCar(Car):
             self.create_avaliable_set(self.points)
             # self.points += 1
             self.bfs(my_road_key)
+            start = time.time()
             self.mha_star(my_road_key)
+            print(f'Time: {time.time()-start}')
             print(self.adjList)
             print(f'\nPath:\n{self.path}, actions: {self.actions}')
         # ****
@@ -106,18 +109,6 @@ class MyCar(Car):
                     queue.append((neighbour[0], path + [neighbour[0]], action + [neighbour[1]]))
     
     def calc_heuristic(self, point):
-        '''
-        Ogolem heurystyki dopuszczlane sa bardzo stinki do oblcizenia mha* bo zawsze L1
-        bedzie najlepsza bo JEST rzeczywista odlegoscia w tym przypadku. Ale jezeli chcesz
-        w to isc to znalazlem takie jakies smieszne: L1, L2, Chebyshev, Canberra.
-        Ale mysle ze lepiej zrobic niedopuszczalne bo wtedy faktycznie moze cos sie zmieniac
-        i bysmy wybierali najmniejsza wartosc ze wszystkich obliczonych. 
-        Jakie ja znalazlem: Podwojona odległość do najbliższego nieodwiedzonego miasta, 
-        maksymalna odległość do dowolnego nieodwiedzonego miasta, procentowa nadwyżka nad rzeczywistą znaną dolną granicą,
-        losowe przypisanie kosztu na podstawie odległości do wszystkich nieodwiedzonych miast,
-        "spłaszczonej" odległości Euklidesowej (np. f(d)=log(d+1), gdzie d to np. l2 albo l1)
-        Albo cokolwiek z dopuszczalnej ale pomnozone przez 2 czy 1.5 czy cokolwiek.
-        '''
         manhattan_dist = []
         for possible_access in self.av_set:
             manhattan_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]))
@@ -154,7 +145,7 @@ if __name__ == "__main__":
         n_bots=50,
         n_points=10,
         traffic_lights_length=10,
-        random_seed=2137,
+        random_seed=69,
     )
     while env.is_running():
         current_cost, is_running = env.step()
