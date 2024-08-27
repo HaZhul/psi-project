@@ -1,6 +1,6 @@
 from psi_environment.data.car import Car
 from psi_environment.data.action import Action
-from psi_environment.data.map_state import MapState
+from psi_environment.data.map_state import MapState, TrafficLight
 from psi_environment.environment import Environment
 from psi_environment.api.environment_api import EnvironmentAPI
 from psi_environment.data.point import PositionType
@@ -18,11 +18,14 @@ class MyCar(Car):
         self.path = []
         self.actions = []
         self.points = 0
+        self.traffic_var = 1.5
+        self.lights_var = 2
 
     def get_action(self, map_state: MapState) -> Action:
         my_road_key = self.get_road_key()
         my_road_pos = self.get_road_pos()
         self.api = EnvironmentAPI(map_state)
+        self.traffic_obj = TrafficLight(None)
 
         my_road = self.api.get_road(my_road_key)
         
@@ -113,12 +116,32 @@ class MyCar(Car):
                 if neighbour[0] not in path:
                     queue.append((neighbour[0], path + [neighbour[0]], action + [neighbour[1]]))
     
-    def calc_heuristic(self, point):
+    def manhattan_heuristic(self, point):
         manhattan_dist = []
         for possible_access in self.av_set:
             manhattan_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]))
         return min(manhattan_dist)
     
+
+    def traffic_heuristic(self, point):
+        traffic_len = self.api.get_road_traffic(point)
+        traffic_dist = []
+        for possible_access in self.av_set:
+            traffic_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]) + traffic_len * self.traffic_var)
+        return min(traffic_dist)
+
+    def lights_heuristic(self, point):
+        lights_dist = []
+        traffic_list = self.traffic_obj.get_blocked_road_keys()
+        if point in traffic_list:
+            for possible_access in self.av_set:
+                lights_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]))
+                return min(lights_dist) * self.lights_var
+        else: 
+            for possible_access in self.av_set:
+                lights_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]))
+                return min(lights_dist)
+            
 
     def mha_star(self, startNode):
             queue = SortedList()
@@ -136,7 +159,7 @@ class MyCar(Car):
                     if neighbour[0] not in path:
                         actual_cost = neighbour[2]
                         g_n = currentDist + actual_cost
-                        h_n = self.calc_heuristic(neighbour[0])
+                        h_n = self.manhattan_heuristic(neighbour[0])
                         f_cost = g_n + h_n
                         queue.add((f_cost, g_n, path + [neighbour[0]], action + [neighbour[1]], neighbour[0]))
         
