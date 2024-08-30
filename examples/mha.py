@@ -72,13 +72,13 @@ class MyCar(Car):
             # start = time.time()
             self.positions = my_road_pos
             self.mha_star_mh(my_road_key)
-            print(f'Dist: {self.dist, self.dist_tl[0]}')
+            print(f'Dist: {self.dist, self.dist_tl}')
             # print(f'Time: {time.time()-start}')
             # print(f'\nPath (Normal, Traffic):\n{self.path, self.path_tl[0]}\n dist: {self.dist, self.dist_tl[0]}')
             # print(self.api.get_available_turns(my_road_key))
         else:
             self.dist += 1 * self.stay_var
-            print(f'Dist: {self.dist, self.dist_tl[0]}')
+            print(f'Dist: {self.dist, self.dist_tl}')
 
         # Every road change
         if self.key != my_road_key:
@@ -103,13 +103,13 @@ class MyCar(Car):
 
     def check_other_path(self):
         # for i in self.dist_tl:
-        if self.dist_tl[0] < 0.7 * self.dist and self.dist_tl[0] != 0:
-            print(f'{self.dist_tl[0]} jest mniejsze od {0.7*self.dist}')
+        if self.dist_tl < 0.7 * self.dist and self.dist_tl != 0:
+            print(f'{self.dist_tl} jest mniejsze od {0.7*self.dist}')
             print(f'Current path: {self.path}')
-            print(f'Path:\n{self.path_tl[0]}, \n')
-            self.path = self.path_tl[0]
-            self.actions = self.actions_tl[0]
-            self.dist = self.dist_tl[0]
+            print(f'Path:\n{self.path_tl}, \n')
+            self.path = self.path_tl
+            self.actions = self.actions_tl
+            self.dist = self.dist_tl
 
     def create_avaliable_set(self, point_number):
         """
@@ -228,34 +228,33 @@ class MyCar(Car):
         self.actions_tl = []
         self.path_tl = []
         self.dist_tl = []
-        for i in range(2):
-            queue = SortedList()
-            queue.add((0, 0, [startNode], [], startNode))
+        queue = SortedList()
+        queue.add((0, 0, [startNode], [], startNode))
 
-            while queue:
-                # print(queue)
-                totalCost, currentDist, path, action, currentNode = queue.pop(0)
-                # print(f'\nTotal cost: {totalCost}, path: {path}\n')
-                if currentNode in self.av_set:
-                    # print('\n\n\nPath: ', path)
-                    self.actions_tl.append(action)
-                    self.path_tl.append(path)
-                    self.dist_tl.append(totalCost)
-                    break
+        while queue:
+            # print(queue)
+            totalCost, currentDist, path, action, currentNode = queue.pop(0)
+            # print(f'\nTotal cost: {totalCost}, path: {path}\n')
+            if currentNode in self.av_set:
+                # print('\n\n\nPath: ', path)
+                self.actions_tl= action
+                self.path_tl = path
+                self.dist_tl = totalCost
+                break
 
-                for neighbour in self.adjList[currentNode]:
-                    if neighbour[0] not in path:
-                        actual_cost = neighbour[2]
-                        g_n = currentDist + actual_cost
-                        h_n = self.heuristic_func(i, neighbour[0])
-                        f_cost = g_n + h_n
-                        queue.add((f_cost, g_n, path + [neighbour[0]], action + [neighbour[1]], neighbour[0]))
+            for neighbour in self.adjList[currentNode]:
+                if neighbour[0] not in path:
+                    actual_cost = neighbour[2]
+                    g_n = currentDist + actual_cost
+                    h_n = self.heuristic_func(0, neighbour[0])
+                    f_cost = g_n + h_n
+                    queue.add((f_cost, g_n, path + [neighbour[0]], action + [neighbour[1]], neighbour[0]))
     
     def heuristic_func(self, i, N):
         if i == 0:
             return self.traffic_heuristic(N)
-        elif i == 1:
-            return self.lights_heuristic(N)
+        # elif i == 1:
+        #     return self.lights_heuristic(N)
         else:
             raise Exception('Out of range')
 
