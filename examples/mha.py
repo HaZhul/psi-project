@@ -19,13 +19,16 @@ class MyCar(Car):
         self.algneed2 = True
         self.position = 0
         self.key = 0
-        self.path = []
-        self.actions = []
+        self.path = [[],[],[]]
+        self.actions = [[],[],[]]
+        self.distList = [[],[],[]]
+        self.dist = [[],[],[]]
         self.points = 0
         self.points_collected = 0
+        self.chosen_heuristic_number = 0
 
         self.traffic_var = 10
-        self.lights_var = 10
+        self.lights_var = 20
         self.stay_var = 1
 
     def get_action(self, map_state: MapState) -> Action:
@@ -36,28 +39,31 @@ class MyCar(Car):
         my_road = self.api.get_road(my_road_key)
         car_position_point = map_state.get_map_position_by_road_position(my_road_key, my_road_pos)
         # print(map_state.get_map_position_by_road_position((0,1), self.api.get_road_length((0,1))-1))
-        print(f'\nActual road: {my_road_key}, position: {my_road_pos}')
-        # ****
+        # print(f'\nActual road: {my_road_key}, position: {my_road_pos}')
+
+        # One-time
         if self.algneed2:
             self.cost_matrix = self.api.get_adjacency_matrix()
             self.create_adjList()
             self.points_collected = len(self.api.get_points_for_specific_car(1))
-            # self.create_avaliable_set(self.points)
-            self.get_closest_star(car_position_point)
+            self.create_avaliable_set(self.points)
+            # self.get_closest_star(car_position_point)
             self.mha_star_manhattan(my_road_key)
             self.algneed2 = False
 
+        # After collecting a point
         if len(self.api.get_points_for_specific_car(1)) != self.points_collected:
-            print('Points collected: ',len(self.api.get_points_for_specific_car(1)))
+            # print('Points collected: ',len(self.api.get_points_for_specific_car(1)))
             self.points_collected = len(self.api.get_points_for_specific_car(1))
             # print(self.adjList)
             # print('Point: ', self.points)
-            # self.create_avaliable_set(self.points)
-            self.get_closest_star(car_position_point)
+            self.create_avaliable_set(self.points)
+            # self.get_closest_star(car_position_point)
             # self.points += 1
             # self.bfs(my_road_key)
             # start = time.time()
             self.mha_star_manhattan(my_road_key)
+            self.chosen_heuristic_number = 0
             print(self.path)
             # print(self.path)
             # print(self.dist)
@@ -72,18 +78,18 @@ class MyCar(Car):
             # start = time.time()
             self.positions = my_road_pos
             self.mha_star_mh(my_road_key)
-            print(f'Dist: {self.dist, self.dist_tl}')
+            print(f'Dist: {self.dist}')
             # print(f'Time: {time.time()-start}')
             # print(f'\nPath (Normal, Traffic):\n{self.path, self.path_tl[0]}\n dist: {self.dist, self.dist_tl[0]}')
             # print(self.api.get_available_turns(my_road_key))
         else:
-            self.dist += 1 * self.stay_var
-            print(f'Dist: {self.dist, self.dist_tl}')
+            self.dist[0] += 1 * self.stay_var
+            print(f'Dist: {self.dist}')
 
         # Every road change
         if self.key != my_road_key:
             self.key = my_road_key
-            self.dist -= self.distList.pop(0)
+            self.dist[self.chosen_heuristic_number] -= self.distList[self.chosen_heuristic_number].pop(0)
             # print(self.distList, '\n', self.dist)
         
         self.check_other_path()
@@ -91,8 +97,8 @@ class MyCar(Car):
 
         if my_road.is_position_road_end(my_road_pos):
             try:
-                i = self.path.index(my_road_key)
-                current_action = self.actions[i]
+                i = self.path[self.chosen_heuristic_number].index(my_road_key)
+                current_action = self.actions[self.chosen_heuristic_number][i]
             except:
                 self.algneed1 = True
                 return Action.BACK
@@ -102,14 +108,15 @@ class MyCar(Car):
         
 
     def check_other_path(self):
-        # for i in self.dist_tl:
-        if self.dist_tl < 0.7 * self.dist and self.dist_tl != 0:
-            print(f'{self.dist_tl} jest mniejsze od {0.7*self.dist}')
-            print(f'Current path: {self.path}')
-            print(f'Path:\n{self.path_tl}, \n')
-            self.path = self.path_tl
-            self.actions = self.actions_tl
-            self.dist = self.dist_tl
+        for i in range(3):
+            if i == self.chosen_heuristic_number:
+                continue
+
+            if self.dist[i] < 0.7 * self.dist[self.chosen_heuristic_number] and self.dist[i] != 0:
+                print(f'{self.dist[i]} jest mniejsze od {0.7*self.dist[self.chosen_heuristic_number]}')
+                print(f'Current path: {self.path[self.chosen_heuristic_number]}')
+                print(f'Path:\n{self.path[i]}, \n')
+                self.chosen_heuristic_number = i
 
     def create_avaliable_set(self, point_number):
         """
@@ -185,17 +192,17 @@ class MyCar(Car):
         return min(traffic_dist)
 
     # Not useful
-    # def lights_heuristic(self, point):
-    #     lights_dist = []
-    #     traffic_list = self.traffic_obj.get_blocked_road_keys()
-    #     if point in traffic_list:
-    #         for possible_access in self.av_set:
-    #             lights_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]))
-    #         return min(lights_dist) * self.lights_var
-    #     else: 
-    #         for possible_access in self.av_set:
-    #             lights_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]) - self.lights_var/10)
-    #         return min(lights_dist)
+    def lights_heuristic(self, point):
+        lights_dist = []
+        traffic_list = self.traffic_obj.get_blocked_road_keys()
+        if point in traffic_list:
+            for possible_access in self.av_set:
+                lights_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]))
+            return min(lights_dist) * self.lights_var
+        else: 
+            for possible_access in self.av_set:
+                lights_dist.append(abs(point[0] - possible_access[0]) + abs(point[1] - possible_access[1]) + self.lights_var/5)
+            return min(lights_dist)
             
 
     def mha_star_manhattan(self, startNode):
@@ -209,10 +216,10 @@ class MyCar(Car):
                 # print(f'\nTotal cost: {totalCost}, path: {path}\n')
                 if currentNode in self.av_set:
                     # print('\n\n\nPath: ', path)
-                    self.actions = action
-                    self.path = path
-                    self.dist = currentDist
-                    self.distList = distList
+                    self.actions[0] = action
+                    self.path[0] = path
+                    self.dist[0] = currentDist
+                    self.distList[0] = distList
                     break
 
                 for neighbour in self.adjList[currentNode]:
@@ -225,43 +232,45 @@ class MyCar(Car):
         
 
     def mha_star_mh(self, startNode):
-        self.actions_tl = []
-        self.path_tl = []
-        self.dist_tl = []
-        queue = SortedList()
-        queue.add((0, 0, [startNode], [], startNode))
+        # self.actions_tl = []
+        # self.path_tl = []
+        # self.dist_tl = []
+        for i in [1, 2]:
+            queue = SortedList()
+            queue.add((0, 0, [startNode], [], startNode, [0]))
 
-        while queue:
-            # print(queue)
-            totalCost, currentDist, path, action, currentNode = queue.pop(0)
-            # print(f'\nTotal cost: {totalCost}, path: {path}\n')
-            if currentNode in self.av_set:
-                # print('\n\n\nPath: ', path)
-                self.actions_tl= action
-                self.path_tl = path
-                self.dist_tl = totalCost
-                break
+            while queue:
+                # print(queue)
+                totalCost, currentDist, path, action, currentNode, distList = queue.pop(0)
+                # print(f'\nTotal cost: {totalCost}, path: {path}\n')
+                if currentNode in self.av_set:
+                    # print('\n\n\nPath: ', path)
+                    self.actions[i]= action
+                    self.path[i] = path
+                    self.dist[i] = totalCost
+                    self.distList[i] = distList
+                    break
 
-            for neighbour in self.adjList[currentNode]:
-                if neighbour[0] not in path:
-                    actual_cost = neighbour[2]
-                    g_n = currentDist + actual_cost
-                    h_n = self.heuristic_func(0, neighbour[0])
-                    f_cost = g_n + h_n
-                    queue.add((f_cost, g_n, path + [neighbour[0]], action + [neighbour[1]], neighbour[0]))
-    
+                for neighbour in self.adjList[currentNode]:
+                    if neighbour[0] not in path:
+                        actual_cost = neighbour[2]
+                        g_n = currentDist + actual_cost
+                        h_n = self.heuristic_func(i, neighbour[0])
+                        f_cost = g_n + h_n
+                        queue.add((f_cost, g_n, path + [neighbour[0]], action + [neighbour[1]], neighbour[0], distList + [actual_cost]))
+        
     def heuristic_func(self, i, N):
-        if i == 0:
+        if i == 1:
             return self.traffic_heuristic(N)
-        # elif i == 1:
-        #     return self.lights_heuristic(N)
+        elif i == 2:
+            return self.lights_heuristic(N)
         else:
             raise Exception('Out of range')
 
 if __name__ == "__main__":
     env = Environment(
         agent_type=MyCar,
-        ticks_per_second=2,
+        ticks_per_second=10,
         n_bots=50,
         n_points=10,
         traffic_lights_length=10,
