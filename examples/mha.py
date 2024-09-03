@@ -15,7 +15,7 @@ class MyCar(Car):
     def __init__(self, road_key: tuple[int, int], road_pos: int, car_id: int):
         super().__init__(road_key, road_pos, car_id)
 
-        self.algneed1 = True
+        # self.algneed1 = True
         self.algneed2 = True
         self.position = 0
         self.key = 0
@@ -46,8 +46,13 @@ class MyCar(Car):
             self.cost_matrix = self.api.get_adjacency_matrix()
             self.create_adjList()
             self.points_collected = len(self.api.get_points_for_specific_car(1))
-            self.create_avaliable_set(self.points)
-            # self.get_closest_star(car_position_point)
+
+            # Going to the lowest numbered point
+            # self.create_avaliable_set(self.points)
+
+            # Going to the closest point
+            self.get_closest_star(car_position_point)
+
             self.mha_star_manhattan(my_road_key)
             self.algneed2 = False
 
@@ -57,29 +62,30 @@ class MyCar(Car):
             self.points_collected = len(self.api.get_points_for_specific_car(1))
             # print(self.adjList)
             # print('Point: ', self.points)
-            self.create_avaliable_set(self.points)
-            # self.get_closest_star(car_position_point)
-            # self.points += 1
-            # self.bfs(my_road_key)
-            # start = time.time()
+
+            # Going to the lowest numbered point
+            # self.create_avaliable_set(self.points)
+
+            # Going to the closest point
+            self.get_closest_star(car_position_point)
+
+
+            # start = time.perf_counter()
             self.mha_star_manhattan(my_road_key)
             self.chosen_heuristic_number = 0
-            print(self.path)
             # print(self.path)
-            # print(self.dist)
-            # print(self.distList)
-            # print(f'Time: {time.time()-start}')
+            # print(f'Time: {time.perf_counter()-start}')
             # print(f'\nPath (Manhattan):\n{self.path}, actions: {self.actions}')
         # ****
 
         # Every position change
         if self.position != my_road_pos:
             # print('\n', my_road_key)
-            # start = time.time()
+            # start = time.perf_counter()
             self.positions = my_road_pos
             self.mha_star_mh(my_road_key)
             print(f'Dist: {self.dist}')
-            # print(f'Time: {time.time()-start}')
+            # print(f'Time: {time.perf_counter()-start}')
             # print(f'\nPath (Normal, Traffic):\n{self.path, self.path_tl[0]}\n dist: {self.dist, self.dist_tl[0]}')
             # print(self.api.get_available_turns(my_road_key))
         else:
@@ -100,7 +106,6 @@ class MyCar(Car):
                 i = self.path[self.chosen_heuristic_number].index(my_road_key)
                 current_action = self.actions[self.chosen_heuristic_number][i]
             except:
-                self.algneed1 = True
                 return Action.BACK
             return Action(current_action)
         else:
@@ -172,7 +177,6 @@ class MyCar(Car):
                             _, next_value = next_road_key
                             road_cost = self.cost_matrix[j,next_value]
                             self.adjList[(i,j)].append([next_road_key, k, road_cost])
-        self.algneed1 = False
 
     
     def manhattan_heuristic(self, point):
@@ -232,9 +236,6 @@ class MyCar(Car):
         
 
     def mha_star_mh(self, startNode):
-        # self.actions_tl = []
-        # self.path_tl = []
-        # self.dist_tl = []
         for i in [1, 2]:
             queue = SortedList()
             queue.add((0, 0, [startNode], [], startNode, [0]))
@@ -274,7 +275,7 @@ if __name__ == "__main__":
         n_bots=50,
         n_points=10,
         traffic_lights_length=10,
-        random_seed=2137,
+        random_seed=69,
     )
     while env.is_running():
         current_cost, is_running = env.step()
