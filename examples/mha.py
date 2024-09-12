@@ -5,10 +5,8 @@ from psi_environment.environment import Environment
 from psi_environment.api.environment_api import EnvironmentAPI
 from psi_environment.data.point import PositionType
 
-from collections import defaultdict, deque
+from collections import defaultdict
 from sortedcontainers import SortedList
-import numpy as np
-import time
 
 
 class MyCar(Car):
@@ -38,8 +36,6 @@ class MyCar(Car):
         self.traffic_obj = TrafficLight(None)
         my_road = self.api.get_road(my_road_key)
         car_position_point = map_state.get_map_position_by_road_position(my_road_key, my_road_pos)
-        # print(map_state.get_map_position_by_road_position((0,1), self.api.get_road_length((0,1))-1))
-        # print(f'\nActual road: {my_road_key}, position: {my_road_pos}')
 
         # One-time
         if self.algneed2:
@@ -58,45 +54,30 @@ class MyCar(Car):
 
         # After collecting a point
         if len(self.api.get_points_for_specific_car(1)) != self.points_collected:
-            # print('Points collected: ',len(self.api.get_points_for_specific_car(1)))
             self.points_collected = len(self.api.get_points_for_specific_car(1))
-            # print(self.adjList)
-            # print('Point: ', self.points)
-
             # Going to the lowest numbered point
             # self.create_avaliable_set(self.points)
 
             # Going to the closest point
             self.get_closest_star(car_position_point)
 
-
-            # start = time.perf_counter()
             self.mha_star_manhattan(my_road_key)
             self.chosen_heuristic_number = 0
-            # print(self.path)
-            # print(f'Time: {time.perf_counter()-start}')
-            # print(f'\nPath (Manhattan):\n{self.path}, actions: {self.actions}')
-        # ****
+        
 
         # Every position change
         if self.position != my_road_pos:
-            # print('\n', my_road_key)
-            # start = time.perf_counter()
             self.positions = my_road_pos
             self.mha_star_mh(my_road_key)
-            print(f'Dist: {self.dist}')
-            # print(f'Time: {time.perf_counter()-start}')
-            # print(f'\nPath (Normal, Traffic):\n{self.path, self.path_tl[0]}\n dist: {self.dist, self.dist_tl[0]}')
-            # print(self.api.get_available_turns(my_road_key))
         else:
             self.dist[0] += 1 * self.stay_var
-            print(f'Dist: {self.dist}')
 
         # Every road change
         if self.key != my_road_key:
             self.key = my_road_key
             self.dist[self.chosen_heuristic_number] -= self.distList[self.chosen_heuristic_number].pop(0)
-            # print(self.distList, '\n', self.dist)
+        
+
         
         self.check_other_path()
         
@@ -118,16 +99,9 @@ class MyCar(Car):
                 continue
 
             if self.dist[i] < 0.7 * self.dist[self.chosen_heuristic_number] and self.dist[i] != 0:
-                print(f'{self.dist[i]} jest mniejsze od {0.7*self.dist[self.chosen_heuristic_number]}')
-                print(f'Current path: {self.path[self.chosen_heuristic_number]}')
-                print(f'Path:\n{self.path[i]}, \n')
                 self.chosen_heuristic_number = i
 
     def create_avaliable_set(self, point_number):
-        """
-        Returns a set of avaliable combinations of getting to the specific point.
-        Roads can be one-way.
-        """
         self.av_set = set()
         road_obj = self.api.get_points_for_specific_car(1)[point_number]
         if road_obj.type == PositionType.ROAD:
@@ -161,12 +135,7 @@ class MyCar(Car):
 
 
     def create_adjList(self):
-        """
-        A dict where keys are connections between 2 nodes and values are every possible neighbour of this connection.
-        Values are: [Neighbour key (e.g. (0,1)); Action needed to reach it (action.py); Length to neighbour]
-        """
         self.adjList = defaultdict(list)
-        # print(self.cost_matrix[0:8, 0:8])
         for i in range(0, len(self.cost_matrix)):
             for j in range(0, len(self.cost_matrix)):
                 if i != j:
@@ -195,7 +164,6 @@ class MyCar(Car):
                                 + traffic_len/road_length * (3*self.traffic_var))
         return min(traffic_dist)
 
-    # Not useful
     def lights_heuristic(self, point):
         lights_dist = []
         traffic_list = self.traffic_obj.get_blocked_road_keys()
@@ -215,11 +183,8 @@ class MyCar(Car):
             queue.add((0, 0, [startNode], [], startNode, [0]))
 
             while queue:
-                # print(queue)
                 totalCost, currentDist, path, action, currentNode, distList = queue.pop(0)
-                # print(f'\nTotal cost: {totalCost}, path: {path}\n')
                 if currentNode in self.av_set:
-                    # print('\n\n\nPath: ', path)
                     self.actions[0] = action
                     self.path[0] = path
                     self.dist[0] = currentDist
@@ -241,11 +206,8 @@ class MyCar(Car):
             queue.add((0, 0, [startNode], [], startNode, [0]))
 
             while queue:
-                # print(queue)
                 totalCost, currentDist, path, action, currentNode, distList = queue.pop(0)
-                # print(f'\nTotal cost: {totalCost}, path: {path}\n')
                 if currentNode in self.av_set:
-                    # print('\n\n\nPath: ', path)
                     self.actions[i]= action
                     self.path[i] = path
                     self.dist[i] = totalCost
@@ -275,7 +237,7 @@ if __name__ == "__main__":
         n_bots=50,
         n_points=10,
         traffic_lights_length=10,
-        random_seed=69,
+        random_seed=2137,
     )
     while env.is_running():
         current_cost, is_running = env.step()
