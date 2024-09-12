@@ -51,6 +51,7 @@ class MyCar(Car):
 
             self.mha_star_manhattan(my_road_key)
             self.algneed2 = False
+            print(self.path, self.distList)
 
         # After collecting a point
         if len(self.api.get_points_for_specific_car(1)) != self.points_collected:
@@ -75,7 +76,10 @@ class MyCar(Car):
         # Every road change
         if self.key != my_road_key:
             self.key = my_road_key
-            self.dist[self.chosen_heuristic_number] -= self.distList[self.chosen_heuristic_number].pop(0)
+            if len(self.distList[self.chosen_heuristic_number]) != 0:
+                self.dist[self.chosen_heuristic_number] -= self.distList[self.chosen_heuristic_number].pop(0)
+            else:
+                self.mha_star_mh(my_road_key)
         
 
         
@@ -234,8 +238,8 @@ if __name__ == "__main__":
     env = Environment(
         agent_type=MyCar,
         ticks_per_second=10,
-        n_bots=50,
-        n_points=10,
+        n_bots=15,
+        n_points=15,
         traffic_lights_length=10,
         random_seed=2137,
     )
